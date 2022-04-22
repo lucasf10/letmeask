@@ -1,33 +1,14 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getDatabase, ref, push, onValue } from 'firebase/database';
+import { getDatabase, ref, push } from 'firebase/database';
 
 import logoImg from '../assets/images/logo.svg'
 import { Button } from '../components/Button'
 import { RoomCode } from '../components/RoomCode'
 import { useAuth } from '../hooks/useAuth'
 import '../styles/room.scss'
-
-type FirebaseQuestions = Record<string, {
-  author: {
-    name: string;
-    avatar: string;
-  }
-  content: string;
-  isAnswered: boolean;
-  isHighlighted: boolean;
-}>;
-
-type Question = {
-  id: string;
-  author: {
-    name: string;
-    avatar: string;
-  }
-  content: string;
-  isAnswered: boolean;
-  isHighlighted: boolean;
-};
+import { Question } from '../components/Question';
+import { useRoom } from '../hooks/useRoom';
 
 type RoomParams = {
   id: string;
@@ -36,32 +17,9 @@ type RoomParams = {
 export const Room = () => {
   const { user } = useAuth()
   const [newQuestion, setNewQuestion] = useState('');
-  const [title, setTitle] = useState('');
-  const [questions, setQuestions] = useState<Question[]>([]);
   const params = useParams<RoomParams>();
   const roomId = params.id;
-
-  useEffect(() => {
-    const roomRef = ref(getDatabase(), `rooms/${roomId}`)
-
-    onValue(roomRef, room => {
-      const databaseRoom = room.val();
-      const firebaseQuestions: FirebaseQuestions = databaseRoom.questions ?? {};
-
-      const parsedQuestions = Object.entries(firebaseQuestions).map(([key, value]) => {
-        return {
-          id: key,
-          content: value.content,
-          author: value.author,
-          isHighlighted: value.isHighlighted,
-          isAnswered: value.isAnswered
-        }
-      });
-
-      setTitle(databaseRoom.title)
-      setQuestions(parsedQuestions)
-    })
-  }, [roomId])
+  const { title, questions } = useRoom(roomId!)  
 
   const handleSendQuestion = async (event: FormEvent) => {
     event.preventDefault();
@@ -122,6 +80,16 @@ export const Room = () => {
             <Button type="submit" disabled={!user}>Enviar pergunta</Button>
           </div>
         </form>
+
+        <div className="question-list">
+          {questions.map(question => (
+            <Question
+              key={question.id}
+              content={question.content}
+              author={question.author}
+            />
+          ))}
+        </div>
       </main>
     </div>
   )
